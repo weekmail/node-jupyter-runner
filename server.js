@@ -1,7 +1,7 @@
 // Modules used by server
 const http = require("http");
 const urlparser = require("url");
-const fetch = require("node-fetch");
+const fetch = (...args) => import('node-fetch').then(({default: fetch}) => fetch(...args));
 const colors = require("colors");
 const { exec } = require('child_process');
 
