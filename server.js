@@ -29,7 +29,7 @@ const requestListener = async function (req, res) {
         
         // Pull notebook from Jupyter using API
         
-        var notebook = await getNotebook(link.pathname.split("/")[2]);
+        var notebook = await getNotebook(link.pathname.split("/exec/")[1]);
         var steps = prepareNotebook(notebook);
         
         // Execute notebook and capture output
