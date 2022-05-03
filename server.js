@@ -58,7 +58,7 @@ async function getNotebook(notebookName)
     // Get notebook
     try
     {
-        var response = await fetch(`http://127.0.0.1:8888/api/contents/${notebookName}.ipynb`);
+        var response = await fetch(`http://127.0.0.1:8888/api/contents/${notebookName}.ipynb?token=${process.env.JUPYTER_TOKEN}`);
         var body = await response.text();
         return JSON.parse(body);
     }
