@@ -1,10 +1,9 @@
 // Modules used by server
 const http = require("http");
 const urlparser = require("url");
-const fetch = (...args) =>
-    import ('node-fetch').then(({ default: fetch }) => fetch(...args));
+const fetch = require("node-fetch");
 const colors = require("colors");
-const { exec } = require('child_process');
+const { exec } = require("child_process");
 
 // Modules used by notebooks
 const parse = require("node-html-parser").parse;
@@ -17,8 +16,11 @@ const requestListener = async function(req, res) {
 
     // Display request details
     if (link.pathname.startsWith("/exec/")) {
+
         console.log(`Notebook: ${link.pathname}`);
         console.log(`Parameters:`);
+
+        var notebookName = link.pathname.split("/exec/")[1];
 
         var parameters = {};
         Array.from(link_parameters.keys()).map(function(key) {
@@ -26,22 +28,37 @@ const requestListener = async function(req, res) {
             parameters[key] = link_parameters.get(key);
         });
 
-        // Pull notebook from Jupyter using API
+        var output = {};
 
-        var notebook = await getNotebook(link.pathname.split("/exec/")[1]);
-        var steps = prepareNotebook(notebook);
+        // Verify permissions
 
-        // Execute notebook and capture output
+        var permission = await checkPermission(notebookName, parameters.key)
 
-        var output = await executeNotebook(steps, parameters);
+        if (permission.access) {
+
+            // Pull notebook from Jupyter using API
+
+            var notebook = await getNotebook(notebookName);
+            var steps = prepareNotebook(notebook);
+
+            // Execute notebook and capture output
+
+            output = await executeNotebook(steps, parameters);
+
+        } else {
+
+            // No permissions
+            output = permission.error;
+
+        }
 
         // Export output
 
         if (typeof(output) == "object") {
-            res.writeHead(200, { 'Content-Type': 'application/json' });
+            res.writeHead(200, { "Content-Type": "application/json" });
             res.write(JSON.stringify(output, null, 2));
         } else {
-            res.writeHead(200, { 'Content-Type': 'text/plain' });
+            res.writeHead(200, { "Content-Type": "text/plain" });
             res.write(output);
         }
     }
@@ -52,10 +69,36 @@ const requestListener = async function(req, res) {
 const server = http.createServer(requestListener);
 server.listen(8889);
 
+async function checkPermission(notebookName, key) {
+    try {
+        // Download keys
+        var response = await fetch(`http://localhost:8888/api/contents/_keys.json?token=${process.env.JUPYTER_TOKEN}`);
+        if (response.status == 404) {
+            // When the file does not exist, do not apply security
+            return { "access": true }
+        } else {
+            // File exists, check key
+            var json = await response.json();
+            try {
+                var keys = JSON.parse(json.content);
+            } catch (e) {
+                return { "access": false, "error": `Error in keys definition: ${e}` }
+            }
+            if (keys.length == 0 || keys.some(k => k.key == key && k.permissions.some(p => notebookName.toLowerCase().startsWith(p.toLowerCase())))) {
+                return { "access": true }
+            } else {
+                return { "access": false, "error": `Bad key or no permission to selected notebook.` };
+            }
+        }
+    } catch (e) {
+        return { "access": false, "error": `Error fetching keys: ${e}` };
+    }
+}
+
 async function getNotebook(notebookName) {
     // Get notebook
     try {
-        var response = await fetch(`http://127.0.0.1:8888/api/contents/${notebookName}.ipynb?token=${process.env.JUPYTER_TOKEN}`);
+        var response = await fetch(`http://localhost:8888/api/contents/${notebookName}.ipynb?token=${process.env.JUPYTER_TOKEN}`);
         var body = await response.text();
         return JSON.parse(body);
     } catch (e) {
@@ -104,8 +147,8 @@ async function executeNotebook(steps, parameters) {
         }
     };
 
-    // Set variables
-    arguments = parameters;
+    // Assign variables into global
+    Object.keys(parameters).forEach(parameter => global[parameter] = parameters[parameter]);
 
     // Loop over steps
     var i = 1;
@@ -113,13 +156,13 @@ async function executeNotebook(steps, parameters) {
 
     try {
         for (var step of steps) {
-            console.log(`=== Step #${i} ===`.green);
+            //console.log(`=== Step #${i} ===`.green);
             //console.log(step.gray);
             var tempOutput = await eval(step);
             if (tempOutput) {
                 lastOutput = tempOutput;
             }
-            console.log("Results:".red, tempOutput);
+            //console.log("Results:".red, tempOutput);
             await $$.isDone();
             i++;
         };

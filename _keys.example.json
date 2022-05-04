@@ -1,0 +1,6 @@
+[
+    { "key": "473a8c56-55da-4eec-8269-d0e9de1c374d", "name": "Administrator", "permissions": [""] },
+    { "key": "5e3a4069-4fec-4ed5-9965-7c6da096cc71", "name": "Test 1 - Specific notebooks", "permissions": ["JsonPlaceHolderTest1", "JsonPlaceHolderTest2"] },
+    { "key": "ba0fc7ad-26eb-44bf-9e8c-f1fb5ad1def7", "name": "Test 2 - Specific notebooks", "permissions": ["JsonPlaceHolderTest2", "SubFolder/FirstTest", "SubFolder/SecondaryTest"] },
+    { "key": "ba0fc7ad-26eb-44bf-9e8c-f1fb5ad1def7", "name": "Test 3 - Subfolders", "permissions": ["SubFolder/"] }
+]
