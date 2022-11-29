@@ -7,6 +7,7 @@ const { exec } = require("child_process");
 
 // Modules used by notebooks
 const parse = require("node-html-parser").parse;
+const unfluff = require("node-unfluff");
 
 const requestListener = async function(req, res) {
     res.writeHead(200, { "Content-Type": "application/json" });
